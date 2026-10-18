@@ -1,0 +1,60 @@
+---
+import { getCollection, getEntry, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import FramePicture from '../../components/FramePicture.astro';
+import { frameUrl } from '../../lib/exhibitions';
+
+export async function getStaticPaths() {
+  const notes = await getCollection('notes');
+  return notes.map((note) => ({ params: { slug: note.id }, props: { note } }));
+}
+
+const { note } = Astro.props;
+const { Content } = await render(note);
+const { before, after } = note.data;
+const fmt = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+
+const related = note.data.relatedExhibition ? await getEntry('exhibitions', note.data.relatedExhibition) : undefined;
+const relatedIndex = (note.data.relatedFrame ?? 1) - 1;
+const relatedFrame = related?.data.frames[relatedIndex];
+---
+
+<Base title={note.data.title} current="notes" description={note.data.summary}>
+  <article class="page">
+    <header class="note-head">
+      <p class="label">Field note · {fmt.format(note.data.date)}</p>
+      <h1 class="page-title">{note.data.title}</h1>
+      <p class="summary">{note.data.summary}</p>
+    </header>
+
+    {
+      before && after && (
+        <div class="tones">
+          <figure>
+            <FramePicture image={before.image} alt={before.alt} sizes="(max-width: 40rem) 90vw, 45vw" />
+            <figcaption class="label">Before: straight from the camera</figcaption>
+          </figure>
+          <figure>
+            <FramePicture image={after.image} alt={after.alt} sizes="(max-width: 40rem) 90vw, 45vw" />
+            <figcaption class="label">After: the finished frame</figcaption>
+          </figure>
+        </div>
+      )
+    }
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    {
+      related && relatedFrame && (
+        <p>
+          <a class="link-line back-link" href={frameUrl(related.id, relatedIndex)}>
+            See the frame in {related.data.number} · {related.data.title}
+          </a>
+        </p>
+      )
+    }
+    <p><a class="link-line" href="/notes">All field notes</a></p>
+  </article>
+</Base>

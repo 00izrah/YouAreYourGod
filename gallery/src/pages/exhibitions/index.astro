@@ -1,0 +1,24 @@
+---
+import Base from '../../layouts/Base.astro';
+import ExhibitionRow from '../../components/ExhibitionRow.astro';
+import { getExhibitions } from '../../lib/exhibitions';
+
+const exhibitions = await getExhibitions();
+---
+
+<Base
+  title="Exhibitions"
+  current="exhibitions"
+  description="Every exhibition: finite rooms of six to twelve frames, shown one at a time."
+>
+  <div class="page">
+    <div class="directory-head">
+      <p class="kicker">Directory</p>
+      <h1 class="page-title">Exhibitions</h1>
+      <p>Each room holds between six and twelve frames. Step through them one at a time.</p>
+    </div>
+    <ul class="index" aria-label="All exhibitions">
+      {exhibitions.map((e) => <ExhibitionRow exhibition={e} withBrief />)}
+    </ul>
+  </div>
+</Base>

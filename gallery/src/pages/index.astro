@@ -1,0 +1,56 @@
+---
+import Base from '../layouts/Base.astro';
+import FramePicture from '../components/FramePicture.astro';
+import ExhibitionRow from '../components/ExhibitionRow.astro';
+import { getExhibitions, pickFeatured, frameCount, frameUrl } from '../lib/exhibitions';
+import { site } from '../site.config';
+
+const exhibitions = await getExhibitions();
+const featured = pickFeatured(exhibitions);
+const others = exhibitions.filter((e) => e !== featured);
+const lead = featured?.data.frames[0];
+---
+
+<Base>
+  <div class="page">
+    {
+      featured && (
+        <section class="entrance" aria-labelledby="featured-title">
+          <div>
+            <p class="intro">{site.tagline}</p>
+            <p class="kicker">{featured.data.status === 'current' ? 'Currently showing' : 'Most recent'}</p>
+            <h1 class="title" id="featured-title">{featured.data.title}</h1>
+            <p class="label meta">
+              {featured.data.number} · {frameCount(featured)} · {featured.data.dates}
+            </p>
+            <a class="link-line" href={frameUrl(featured.id, 0)}>
+              Enter the room
+            </a>
+          </div>
+          {lead && (
+            <a class="lit" href={frameUrl(featured.id, 0)} tabindex="-1" aria-hidden="true">
+              <FramePicture
+                image={lead.image}
+                alt=""
+                sizes="(max-width: 52rem) 90vw, 30rem"
+                widths={[480, 720, 960]}
+                dominantColor={lead.dominantColor}
+                priority
+              />
+            </a>
+          )}
+        </section>
+      )
+    }
+
+    {
+      others.length > 0 && (
+        <ul class="index" aria-label="All exhibitions">
+          {others.map((e) => (
+            <ExhibitionRow exhibition={e} />
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</Base>

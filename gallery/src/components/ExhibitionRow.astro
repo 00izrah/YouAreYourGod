@@ -1,0 +1,24 @@
+---
+import { frameCount, frameUrl, statusLabel, type Exhibition } from '../lib/exhibitions';
+
+interface Props {
+  exhibition: Exhibition;
+  /** Show the curatorial brief under the title (directory page). */
+  withBrief?: boolean;
+}
+
+const { exhibition: e, withBrief = false } = Astro.props;
+const hasRoom = e.data.frames.length > 0;
+const Tag = hasRoom ? 'a' : 'div';
+const href = hasRoom ? frameUrl(e.id, 0) : undefined;
+---
+
+<li>
+  <Tag class:list={['index-row', { 'is-upcoming': e.data.status === 'upcoming' }]} href={href}>
+    <span class="label">{e.data.number}</span>
+    <span class="title">{e.data.title}</span>
+    <span class="label count">{hasRoom ? frameCount(e) : e.data.dates}</span>
+    <span class="label state">{statusLabel(e)}</span>
+    {withBrief && <span class="brief">{e.data.curatorialBrief}</span>}
+  </Tag>
+</li>

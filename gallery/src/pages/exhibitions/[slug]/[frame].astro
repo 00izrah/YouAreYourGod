@@ -1,0 +1,135 @@
+---
+import Base from '../../../layouts/Base.astro';
+import FramePicture from '../../../components/FramePicture.astro';
+import { getImage } from 'astro:assets';
+import { getExhibitions, frameUrl, pad } from '../../../lib/exhibitions';
+
+export async function getStaticPaths() {
+  const exhibitions = await getExhibitions();
+  return exhibitions.flatMap((exhibition) =>
+    exhibition.data.frames.map((_frame, index) => ({
+      params: { slug: exhibition.id, frame: pad(index + 1) },
+      props: { exhibition, index },
+    })),
+  );
+}
+
+const { exhibition, index } = Astro.props;
+const frames = exhibition.data.frames;
+const frame = frames[index]!;
+const total = frames.length;
+const prev = frames[index - 1];
+const next = frames[index + 1];
+
+const urls = {
+  prev: prev ? frameUrl(exhibition.id, index - 1) : undefined,
+  next: next ? frameUrl(exhibition.id, index + 1) : undefined,
+  first: frameUrl(exhibition.id, 0),
+  last: frameUrl(exhibition.id, total - 1),
+  exit: '/exhibitions',
+};
+
+// Deep-zoom source: the largest sensible variant, high quality.
+const zoom = await getImage({
+  src: frame.image,
+  width: Math.min(2400, frame.image.width),
+  format: 'webp',
+  quality: 90,
+});
+// Open Graph image for sharing this frame.
+const og = await getImage({ src: frame.image, width: Math.min(1200, frame.image.width), format: 'jpeg', quality: 82 });
+
+// Warm the cache for neighbours so stepping never shows a blank.
+const neighbourImages = await Promise.all(
+  [prev, next]
+    .filter((f): f is NonNullable<typeof f> => !!f)
+    .map((f) => getImage({ src: f.image, width: Math.min(1600, f.image.width), format: 'webp', quality: 84 })),
+);
+
+const label = `${exhibition.data.number} · ${exhibition.data.title}`;
+const year = frame.date.getFullYear();
+const speculation = {
+  prerender: [{ source: 'list', urls: [urls.prev, urls.next].filter(Boolean), eagerness: 'eager' }],
+};
+---
+
+<Base
+  title={`${frame.title} — ${exhibition.data.title}`}
+  description={frame.curatorialNote}
+  current="exhibitions"
+  roomLabel={label}
+  bodyClass="is-room"
+  ogImage={og.src}
+>
+  <Fragment slot="head">
+    {urls.prev && <link rel="prefetch" href={urls.prev} />}
+    {urls.next && <link rel="prefetch" href={urls.next} />}
+    <script type="speculationrules" set:html={JSON.stringify(speculation)} is:inline />
+  </Fragment>
+
+  <div
+    class="room"
+    data-room
+    data-prev={urls.prev}
+    data-next={urls.next}
+    data-first={urls.first}
+    data-last={urls.last}
+    data-preload={JSON.stringify(neighbourImages.map((i) => i.src))}
+  >
+    <figure class="exhibit">
+      <a
+        class="frame-link"
+        href={zoom.src}
+        data-zoom
+        data-zoom-alt={frame.alt}
+        aria-label={`Open ${frame.title} full screen to zoom`}
+      >
+        <FramePicture
+          image={frame.image}
+          alt={frame.alt}
+          sizes="(max-width: 40rem) 90vw, min(88vw, 1400px)"
+          dominantColor={frame.dominantColor}
+          priority={index === 0}
+        />
+      </a>
+      <figcaption class="plaque" data-plaque data-expanded="false">
+        <h1 class="plaque-title"><span class="num">{pad(index + 1)}</span> · {frame.title}</h1>
+        <p class="plaque-meta">{frame.medium} · {frame.location} · {year}</p>
+        <p class="plaque-note">{frame.curatorialNote}</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  {
+    urls.prev && (
+      <a class="margin prev" href={urls.prev} rel="prev" aria-label="Previous frame">
+        <span aria-hidden="true">← {pad(index)}</span>
+      </a>
+    )
+  }
+  {
+    urls.next ? (
+      <a class="margin next" href={urls.next} rel="next" aria-label="Next frame">
+        <span aria-hidden="true">{pad(index + 2)} →</span>
+      </a>
+    ) : (
+      <a class="margin next" href={urls.exit} aria-label="Leave the room">
+        <span aria-hidden="true">Leave →</span>
+      </a>
+    )
+  }
+
+  <p class="counter">
+    <span class="visually-hidden">Frame </span><span class="current">{pad(index + 1)}</span> / {pad(total)}
+  </p>
+
+  <dialog class="zoom" id="zoom" aria-label="Zoomed photograph">
+    <button class="zoom-close" type="button" aria-label="Close zoom">×</button>
+    <div class="zoom-stage"><img alt="" /></div>
+    <p class="zoom-hint" aria-hidden="true">scroll or pinch to zoom · drag to pan · double-click to toggle · esc to close</p>
+  </dialog>
+
+  <script>
+    import '../../../scripts/room';
+  </script>
+</Base>

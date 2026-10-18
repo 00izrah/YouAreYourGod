@@ -1,0 +1,81 @@
+---
+/**
+ * Responsive photograph: AVIF + WebP + JPEG, built at build time with per-format quality.
+ * (Astro's <Picture> uses one quality for every format; dark, high-contrast photographs
+ * need different values per codec, so the <picture> is assembled here.)
+ */
+import { getImage } from 'astro:assets';
+import { imageWidths, imageQuality } from '../site.config';
+
+interface Props {
+  image: ImageMetadata;
+  alt: string;
+  sizes: string;
+  widths?: readonly number[];
+  /** First frame of a room / LCP candidate: eager + high fetch priority. */
+  priority?: boolean;
+  /** Placeholder colour shown while the image loads. */
+  dominantColor?: string;
+  class?: string;
+  imgClass?: string;
+  fallbackWidth?: number;
+}
+
+const {
+  image,
+  alt,
+  sizes,
+  widths = imageWidths,
+  priority = false,
+  dominantColor,
+  class: className,
+  imgClass,
+  fallbackWidth = 1600,
+} = Astro.props;
+
+const maxWidth = image.width;
+const eligible = widths.filter((w) => w <= maxWidth);
+if (Math.max(...widths) > maxWidth) eligible.push(maxWidth); // never upscale; offer the original size
+const sizesList = [...new Set(eligible)].sort((a, b) => a - b);
+
+const formats = ['avif', 'webp'] as const;
+const sources = await Promise.all(
+  formats.map(async (format) => {
+    const variants = await Promise.all(
+      sizesList.map((w) => getImage({ src: image, width: w, format, quality: imageQuality[format] })),
+    );
+    return {
+      type: `image/${format}`,
+      srcset: variants.map((v, i) => `${v.src} ${sizesList[i]}w`).join(', '),
+    };
+  }),
+);
+
+const fallback = await getImage({
+  src: image,
+  width: Math.min(fallbackWidth, maxWidth),
+  format: 'jpeg',
+  quality: imageQuality.jpeg,
+});
+
+const style = [`--ratio:${(image.width / image.height).toFixed(4)}`, dominantColor ? `--dominant:${dominantColor}` : '']
+  .filter(Boolean)
+  .join(';');
+---
+
+<picture class={className}>
+  {sources.map((s) => <source type={s.type} srcset={s.srcset} sizes={sizes} />)}
+  <img
+    src={fallback.src}
+    alt={alt}
+    width={image.width}
+    height={image.height}
+    class={imgClass}
+    style={style}
+    sizes={sizes}
+    loading={priority ? 'eager' : 'lazy'}
+    decoding={priority ? 'sync' : 'async'}
+    fetchpriority={priority ? 'high' : 'auto'}
+    draggable="false"
+  />
+</picture>

@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Production builds
+dist/
+
+# Framework artifacts
+.astro/
+
+# Test / Scratch artifacts
+quality-test/
+
+# Secrets & Environment
+.env
+*.env
+
+# OS metadata
+.DS_Store
+Thumbs.db

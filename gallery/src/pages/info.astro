@@ -1,0 +1,36 @@
+---
+import { getEntry, render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import { getExhibitions, statusLabel } from '../lib/exhibitions';
+import { site } from '../site.config';
+
+const entry = await getEntry('info', 'info');
+const { Content } = await render(entry!);
+const email = entry!.data.email ?? site.email;
+const exhibitions = await getExhibitions();
+---
+
+<Base title="Info" current="info" description="Statement and contact.">
+  <div class="page">
+    <p class="kicker">Statement</p>
+    <h1 class="page-title" style="margin-bottom: 2.5rem">Info</h1>
+    <div class="prose">
+      <Content />
+    </div>
+
+    <p class="kicker" style="margin-top: 4rem">Contact</p>
+    <p><a class="link-line" href={`mailto:${email}`}>{email}</a></p>
+
+    <ul class="index" aria-label="Exhibitions" style="max-width: 44rem">
+      {
+        exhibitions.map((e) => (
+          <li class="index-row" style="grid-template-columns: 4.5rem minmax(0, 1fr) auto">
+            <span class="label">{e.data.number}</span>
+            <span class="title" style="font-size: 1.3rem">{e.data.title}</span>
+            <span class="label">{statusLabel(e)}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</Base>
