@@ -7,15 +7,14 @@
     "dev": "astro dev",
     "build": "astro check && astro build",
     "preview": "astro preview",
-    "astro": "astro",
-    "frame-meta": "node scripts/frame-meta.mjs",
-    "compare-quality": "node scripts/compare-quality.mjs"
+    "astro": "astro"
   },
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.2.0",
     "@fontsource/geist-mono": "^5.2.0",
     "astro": "^5.18.2",
-    "sharp": "^0.34.0"
+    "sharp": "^0.34.0",
+    "swiper": "^14.3.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
